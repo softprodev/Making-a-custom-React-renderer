@@ -1,6 +1,7 @@
 # Part-I
 
-This is part one of the tutorial. In this section, we will create a React reconciler using [`react-reconciler`](https://github.com/facebook/react/tree/master/packages/react-reconciler) package. We are going to implement the renderer using Fiber. Earlier, React was using a **stack renderer** as it was implemented on the traditional JavaScript stack. On the other hand, Fiber is influenced by algebraic effects and functional ideas. It can be thought of as a JavaScript object that contains information about a component, its input, and its output.
+This is part one of the tutorial. In this section, we will create a React reconciler for the current targeted version of 
+`React 16.0.0-alpha.4`. We are going to implement the renderer using Fiber. Earlier, React was using a **stack renderer** as it was implemented on the traditional JavaScript stack. On the other hand, Fiber is influenced by algebraic effects and functional ideas. It can be thought of as a JavaScript object that contains information about a component, its input, and its output.
 
 Before we proceed further, I'll recommend you to read [this](https://github.com/acdlite/react-fiber-architecture) documentation on Fiber architecture by [Andrew Clark](https://twitter.com/acdlite?lang=en). This will make things
 easier for you.
@@ -10,25 +11,37 @@ Let's get started!
 We will first install the dependencies.
 
 ```
-npm install react-reconciler@0.2.0 fbjs@0.8.16
+npm install react-dom@16.0.0-alpha.4 fbjs@0.8.4
 ```
 
-Let's import the `Reconciler` from `react-reconciler` and also the other modules.
+Let's import `ReactFiberReconciler` from `react-dom` and other modules also.
 
 ```js
-import Reconciler from 'react-reconciler';
+import ReactFiberReconciler from 'react-dom/lib/ReactFiberReconciler';
 import emptyObject from 'fbjs/lib/emptyObject';
-
 import createElement from './utils/createElement';
 ```
 
 Notice we have also imported `createElement` function. Don't worry, we will implement it afterwards.
 
-We will create a reconciler instance using `Reconciler` which accepts a **host config** object. In this object we will define
-some methods which can be thought of as lifecycle of a renderer (update, append children, remove children, commit). React will manage all the non-host components, stateless and composites.
+We will create a reconciler instance using `ReactFiberReconciler` which accepts a **host config** object. In this object we will define
+some methods which can be thought of as lifecycle of a renderer (update, append children, remove children, commit). React will manage
+all the non-host components, stateless and composites.
 
 ```js
-const WordRenderer = Reconciler({
+const WordRenderer = ReactFiberReconciler({
+
+  // Creates component instance
+  createInstance(
+    type,
+    props,
+    rootContainerInstance,
+    hostContext,
+    internalInstanceHandle,
+  ) {
+    return createElement(type, props, rootContainerInstance);
+  },
+  
   appendInitialChild(parentInstance, child) {
     if (parentInstance.appendChild) {
       parentInstance.appendChild(child);
@@ -37,35 +50,50 @@ const WordRenderer = Reconciler({
     }
   },
 
-  createInstance(type, props, internalInstanceHandle) {
-    return createElement(type, props, internalInstanceHandle);
+  appendChild(parentInstance, child) {
+    if (parentInstance.appendChild) {
+      parentInstance.appendChild(child);
+    } else {
+      parentInstance.document = child;
+    }
   },
 
-  createTextInstance(text, rootContainerInstance, internalInstanceHandle) {
-    return text;
+  removeChild(parentInstance, child) {
+    parentInstance.removeChild(child);
   },
 
-  finalizeInitialChildren(wordElement, type, props) {
+  insertBefore(parentInstance, child, beforeChild) {
+    // noop
+  },
+
+  // This is the final method which is called before flushing the root component to the host environment.
+  finalizeInitialChildren(testElement, type, props, rootContainerInstance) {
     return false;
   },
 
-  getPublicInstance(inst) {
-    return inst;
-  },
-
-  prepareForCommit() {
-    // noop
-  },
-
-  prepareUpdate(wordElement, type, oldProps, newProps) {
+  prepareUpdate(testElement, type, oldProps, newProps, hostContext) {
     return true;
   },
 
-  resetAfterCommit() {
+  commitUpdate(
+    instance,
+    type,
+    oldProps,
+    newProps,
+    rootContainerInstance,
+    internalInstanceHandle,
+  ) {
     // noop
   },
-
-  resetTextContent(wordElement) {
+  
+  // This is called after initializeFinalChildren
+  commitMount(
+    instance,
+    type,
+    newProps,
+    rootContainerInstance,
+    internalInstanceHandle,
+  ) {
     // noop
   },
 
@@ -76,64 +104,53 @@ const WordRenderer = Reconciler({
   getChildHostContext() {
     return emptyObject;
   },
+  
+  getPublicInstance(inst) {
+    return inst;
+  },
 
-  shouldSetTextContent(type, props) {
+  // These are necessary for any global side-effects that you need to produce in the host environment
+  
+  prepareForCommit() {
+    // noop
+  },
+
+  resetAfterCommit() {
+    // noop
+  },
+  
+  // The following methods are for the specific text nodes. In our example, we don't have any specific text nodes so we return false or noop them
+  
+  shouldSetTextContent(props) {
     return false;
   },
 
-  now: () => {},
+  resetTextContent(testElement) {
+    // noop
+  },
 
+  createTextInstance(
+    text,
+    rootContainerInstance,
+    hostContext,
+    internalInstanceHandle,
+  ) {
+    return text;
+  },
+
+  commitTextUpdate(textInstance, oldText, newText) {
+    textInstance.chidren = newText;
+  },
+  
   useSyncScheduling: true,
-
-  mutation: {
-    appendChild(parentInstance, child) {
-      if (parentInstance.appendChild) {
-        parentInstance.appendChild(child);
-      } else {
-        parentInstance.document = child;
-      }
-    },
-
-    appendChildToContainer(parentInstance, child) {
-      if (parentInstance.appendChild) {
-        parentInstance.appendChild(child);
-      } else {
-        parentInstance.document = child;
-      }
-    },
-    
-    removeChild(parentInstance, child) {
-      parentInstance.removeChild(child);
-    },
-
-    removeChildFromContainer(parentInstance, child) {
-      parentInstance.removeChild(child);
-    },
-  
-    insertBefore(parentInstance, child, beforeChild) {
-      // noob
-    },
-  
-    commitUpdate(instance, updatePayload, type, oldProps, newProps) {
-      // noop
-    },
-  
-    commitMount(instance, updatePayload, type, oldProps, newProps) {
-      // noop
-    },
-  
-    commitTextUpdate(textInstance, oldText, newText) {
-      textInstance.children = newText;
-    },
-  }
-})
+});
 ```
 
 Let's break down our host config -
 
 **`createInstance`**
 
-This method creates a component instance with `type`, `props` and `internalInstanceHandle`.
+This method creates a component instance with `type`, `props`, `rootContainerInstance`, `hostContext` and `internalInstanceHandle`.
 
 Example - Let's say we render,
 
@@ -141,7 +158,8 @@ Example - Let's say we render,
 <Text>Hello World</Text>
 ```  
 
-`createInstance` will then return the information about the `type` of an element (' TEXT '), props ( { children: 'Hello World' } ), and the root instance (`WordDocument`). 
+`createInstance` will then return the information about the `type` of an element (' TEXT '), props ( { children: 'Hello World' } ), rootContainerInstance(`WordDocument`),
+hostContext (`{}`) and internalInstanceHandle. 
 
 `internalInstanceHandle` contains information about the `tag`, `type`, `key`, `stateNode`, and the return fiber. This object (fiber) further contains information about -
 
@@ -200,7 +218,5 @@ This is an identity relation which means that it always returns the same value t
 We're done with the Part One of our tutorial. I know some concepts are difficult to grok solely by looking at code. Initially it feels agitating but keep trying it and it will eventually make sense. When I first started learning about the Fiber architecture, I couldn't understand anything at all. I was frustated and dismayed but I used `console.log()` in every section of the above code and tried to understand its implementation and then there was this "Aha Aha" moment and it finally helped me to build [redocx](https://github.com/nitin42/redocx). Its a little perplexing to understand but you will get it eventually.
 
 If you still have any doubts, DMs are open. I'm at [@NTulswani](https://twitter.com/NTulswani) on Twitter.
-
-[More practical examples for the renderer](https://github.com/facebook/react/tree/master/packages/react-reconciler#practical-examples)
 
 [Continue to Part-II](./part-two.md)

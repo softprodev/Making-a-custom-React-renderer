@@ -1,8 +1,6 @@
 # Part-I
 
-This is part one of the tutorial. This is the most important section of the tutorial where you'll learn about the Fiber, detailed description of its structure and fields, creating host configuration for your renderer and injecting the renderer into devtools.
-
-In this section, we will create a React reconciler using [`react-reconciler`](https://github.com/facebook/react/tree/master/packages/react-reconciler) package. We are going to implement the renderer using Fiber. Earlier, React was using a **stack renderer** as it was implemented on the traditional JavaScript stack. On the other hand, Fiber is influenced by algebraic effects and functional ideas. It can be thought of as a JavaScript object that contains information about a component, its input, and its output.
+This is part one of the tutorial. In this section, we will create a React reconciler using [`react-reconciler`](https://github.com/facebook/react/tree/master/packages/react-reconciler) package. We are going to implement the renderer using Fiber. Earlier, React was using a **stack renderer** as it was implemented on the traditional JavaScript stack. On the other hand, Fiber is influenced by algebraic effects and functional ideas. It can be thought of as a JavaScript object that contains information about a component, its input, and its output.
 
 Before we proceed further, I'll recommend you to read [this](https://github.com/acdlite/react-fiber-architecture) documentation on Fiber architecture by [Andrew Clark](https://twitter.com/acdlite?lang=en). This will make things
 easier for you.
@@ -21,7 +19,7 @@ Let's import the `Reconciler` from `react-reconciler` and also the other modules
 import Reconciler from 'react-reconciler';
 import emptyObject from 'fbjs/lib/emptyObject';
 
-import { createElement, getHostContextNode } from './utils/createElement';
+import { createElement } from './utils/createElement';
 ```
 
 Notice we have also imported `createElement` function. Don't worry, we will implement it afterwards.
@@ -40,7 +38,7 @@ const WordRenderer = Reconciler({
   },
 
   createInstance(type, props, internalInstanceHandle) {
-    return createElement(type, props);
+    return createElement(type, props, internalInstanceHandle);
   },
 
   createTextInstance(text, rootContainerInstance, internalInstanceHandle) {
@@ -72,7 +70,7 @@ const WordRenderer = Reconciler({
   },
 
   getRootHostContext(rootInstance) {
-    return getHostContextNode(rootInstance);
+    // You can use this 'rootInstance' to pass data from the roots.
   },
 
   getChildHostContext() {

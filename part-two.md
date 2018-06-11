@@ -18,16 +18,16 @@ for creating a document instance for [officegen](https://github.com/Ziv-Barber/o
 **`WordDocument.js`**
 
 ```js
-import officegen from 'officegen';
+import officegen from 'officegen'
 
 // This creates the document instance
 class WordDocument {
-  constructor() {
-    this.doc = officegen('docx');
-  }
+	constructor() {
+		this.doc = officegen('docx')
+	}
 }
 
-export default WordDocument;
+export default WordDocument
 ```
 
 Now let's create our `Document` component.
@@ -35,28 +35,28 @@ Now let's create our `Document` component.
 **`Document.js`**
 
 ```js
-import { noop } from '../utils/noop';
-import { appendChild } from '../utils/appendChild';
+import { noop } from '../utils/noop'
+import { appendChild } from '../utils/appendChild'
 
 class Document {
-  constructor(root, props) {
-    this.root = root;
-    this.props = props;
+	constructor(root, props) {
+		this.root = root
+		this.props = props
 
-    // docx instance for adding text nodes (Note - This text nodes are different when compared to DOM)
-    this.adder = this.root.doc.createP();
-  }
+		// docx instance for adding text nodes (Note - This text nodes are different when compared to DOM)
+		this.adder = this.root.doc.createP()
+	}
 
-  appendChild(child) {
-    appendChild.call(this, child);
-  }
+	appendChild(child) {
+		appendChild.call(this, child)
+	}
 
-  render() {
-    noop();
-  }
+	render() {
+		noop()
+	}
 }
 
-export default Document;
+export default Document
 ```
 
 Let's see what's going on here!
@@ -93,34 +93,34 @@ This method removes a child node. Again we used this in our reconciler.
 
 **`render`**
 
-As we have already appended the child node using `appendChild`, `officegen` ensures that the child (text) is added to its main instance, so we can safely return noop in render. However, this may vary in your host environment where after appending the child node using platform specific API, you also might want to render something.
+As we already have appended the child node using `appendChild`, so it's safe to return noop. However, this may vary in your host environment where you might want to render something initially.
 
 Let's create the `Text` component
 
 `Text.js`
 
 ```js
-import { noop } from '../utils/noop';
+import { noop } from '../utils/noop'
 
 class Text {
-  constructor(root, props) {
-    this.root = root;
-    this.props = props;
+	constructor(root, props) {
+		this.root = root
+		this.props = props
 
-    this.adder = this.root.doc.createP();
-  }
+		this.adder = this.root.doc.createP()
+	}
 
-  appendChild(child) {
-    this.adder.addText(child);
-  }
+	appendChild(child) {
+		this.adder.addText(child)
+	}
 
-  render() {
-    // We already have appended the child node using `addText` in appendChild, so it's safe to return noop
-    noop();
-  }
+	render() {
+		// We already have appended the child node using `addText` in appendChild, so it's safe to return noop
+		noop()
+	}
 }
 
-export default Text;
+export default Text
 ```
 
 Implementation for `Text` is similar to the `Document` component except we just render the text string using `addText`.
@@ -130,7 +130,7 @@ For this tutorial, the scope is kept limited for both the components, `Document`
 ```js
 // noop.js
 
-export const noop = () => {};
+export const noop = () => {}
 ```
 
 ```js
@@ -140,13 +140,13 @@ export const noop = () => {};
 // Note: This will vary in different host environments. For example - In browser, you will use document.appendChild(child)
 
 export function appendChild(child) {
-  if (typeof child === 'string') {
-    // Add the string and render the text node
-    this.adder.addText(child);
-  } else if (typeof child === 'object') {
-    // It's a component
-    child.render();
-  }
+	if (typeof child === 'string') {
+		// Add the string and render the text node
+		this.adder.addText(child)
+	} else if (typeof child === 'object') {
+		// It's a component
+		child.render()
+	}
 }
 ```
 
@@ -158,64 +158,9 @@ In `appendChild`, we also check whether the `child` is a component or not. If it
 
 ```js
 <Document>
-  <Text>Hello</Text>
+	<Text>Hello</Text>
 </Document>
 ```
-
-#### Note
-
-* Do not track the children inside an array in your class component API. Instead, directly append them using specific host API, as React provides all the valuable information about the child (which was removed or added)
-
-This is correct
-
-```js
-
-class MyComponent {
-  constructor(rootInstance, props) {
-    this.props = props
-    this.root = rootInstance
-  }
-  
-  appendChild(child) {
-    some_platform_api.add(child)
-    // In browser, you may use something like: document.appendChild(child)
-  }
-  
-  render() {
-    // do something or return noop if root instance already contains the child node (this vary in different host environment)
-  }
-}
-
-```
-
-This is incorrect
-
-```js
-class MyComponent {
-  children = []
-  
-  constructor(rootInstance, props) {
-    this.props = props
-    this.root = rootInstance
-  }
-  
-  appendChild(child) {
-    this.children.push(child)
-  }
-  
-  renderChildren() {
-    for(let i = 0; i < this.children.length; i++) {
-      // do something with this.children[i]
-    }
-  }
-  
-  render() {
-    this.renderChildren()
-  }
-}
-```
-
-* If you're rendering target does not provide a mutate method like `appendChild` and instead only lets you replace the whole "scene" at once, you might want to use the "persistent" renderer mode instead. Here's an [example host config for persistent renderer](https://github.com/facebook/react/blob/master/packages/react-native-renderer/src/ReactFabricHostConfig.js).
 
 ## createElement
 
@@ -224,7 +169,7 @@ This is similar to the `React.createElement()` for DOM as a target.
 **`createElement.js`**
 
 ```js
-import { Document, Text, WordDocument } from '../components/index';
+import { Document, Text, WordDocument } from '../components/index'
 
 /**
  * Creates an element for a document
@@ -233,17 +178,17 @@ import { Document, Text, WordDocument } from '../components/index';
  * @param {Object} root Root instance
  */
 function createElement(type, props, root) {
-  const COMPONENTS = {
-    ROOT: () => new WordDocument(),
-    TEXT: () => new Text(root, props),
-    DOCUMENT: () => new Document(root, props),
-    default: undefined
-  };
+	const COMPONENTS = {
+		ROOT: () => new WordDocument(),
+		TEXT: () => new Text(root, props),
+		DOCUMENT: () => new Document(root, props),
+		default: undefined
+	}
 
-  return COMPONENTS[type]() || COMPONENTS.default;
+	return COMPONENTS[type]() || COMPONENTS.default
 }
 
-export { createElement };
+export { createElement }
 ```
 
 I think you can easily understand what's happening inside the `createElement` method. It takes an element, props, and the root instance.
